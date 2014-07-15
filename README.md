@@ -1,3 +1,8 @@
-The OpenShift `nodejs` cartridge documentation can be found at:
+Bitcoin tools
+=============
 
-http://openshift.github.io/documentation/oo_cartridge_guide.html#nodejs
+A variety of Bitcoin tools.
+
+1) First up a savings account distributor. For every bitcoin payment received, 10% goes to a cold storage wallet.
+
+For any questions, support or ideas, email Andrew at support@golightlyplus.com
