@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--[if IE 9]><html class="lt-ie10" lang="en" > <![endif]-->
-<html class="no-js" lang="en" >
+<html class="no-js" lang="en" ng-app="bitcoinTools">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,13 +9,36 @@
         <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/foundation/5.3.0/css/normalize.min.css">
         <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/foundation/5.3.0/css/foundation.min.css">
         <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+        <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
 
         <link rel="stylesheet" href="css/bitcoin.css">
 
         <script src="http://cdnjs.cloudflare.com/ajax/libs/foundation/5.3.0/js/vendor/modernizr.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.20/angular.min.js"></script>
 
     </head>
-    <body class="text-center">
+    <body class="text-center" ng-controller="btcDisplay" ng-cloak>
+
+        <nav class="top-bar" data-topbar>
+            <ul class="title-area">
+                <li class="name">
+                    <h1><a href="#">GolightlyPlus Bitcoin Tools</a></h1>
+                </li>
+                <!-- Remove the class "menu-icon" to get rid of menu icon. Take out "Menu" to just have icon alone -->
+                <li class="toggle-topbar menu-icon"><a href="#"><span>Menu</span></a></li>
+            </ul>
+
+            <section class="top-bar-section">
+                <!-- Right Nav Section -->
+                <ul class="right">
+                    <li ng-show="loggedIn"><a>Logged in as {{user.name}}</a></li>
+                    <li class="divider"></li>
+                    <li ng-show="loggedIn"><a href="#" ng-click="logout()">logout</a></li>
+                    <li ng-hide="loggedIn"><a href="#" ng-click="loginWithGoogle()">Login</a></li>
+                </ul>
+
+            </section>
+        </nav>
 
         <div class="row">
             <div class="columns small-12">
@@ -27,6 +50,7 @@
                 <div class="panel callout radius">
                     <h5>This app processes Bitcoin payments.</h5>
                     <img src="http://icons.iconarchive.com/icons/iconka/cat-commerce/128/search-icon.png">
+                    <h3 ng-show="loggedIn">Your current balance is <strong>{{btcBalance}} BTC</strong></h3>
                 </div>
 
                 <footer>
@@ -39,6 +63,10 @@
 
         <script src="http://cdnjs.cloudflare.com/ajax/libs/foundation/5.3.0/js/vendor/jquery.js"></script>
         <script src="http://cdnjs.cloudflare.com/ajax/libs/foundation/5.3.0/js/foundation.min.js"></script>
+        <script src='https://cdn.firebase.com/js/simple-login/1.6.1/firebase-simple-login.js'></script>
+        <script src="https://cdn.firebase.com/js/client/1.0.17/firebase.js"></script>
+
+        <script src="js/bitcoinTools.js"></script>
         <script>
             $(document).foundation();
         </script>

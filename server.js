@@ -10,37 +10,71 @@ bitcoinApp.use(express.static(__dirname + '/public'));
 
 // api start ---------------------------------------------------------------------
 
-// process the callback from blockchain.info
-bitcoinApp.get('/process', function(req, res) {
+// Callback from blockchain.info
+bitcoinApp.get('/process_payment', function(req, res) {
 
-    const bcMethod = 'balance';
+    console.log("Parameters received: ", req.query);
 
-    // get info from blockchain
-    var blockchainAPIURL = 'https://blockchain.info/merchant/' +
-        process.env.BC_WALLET_IDENTIFIER + '/' + bcMethod +
-        '?password=' + process.env.BC_WALLET_PASSWORD;
+    const minReqConfirmations = 6;
+    const validIncomingIpAddress = '127.0.0.1'; // blockchain.info IP address: 190.93.243.195
 
-    console.log("URL sent to blockchain.info: "  + blockchainAPIURL);
-    /*
-        var postData = {
-        method: method,
-        nonce: new Date().getTime()
-    };
-    console.log("params: " + qs.stringify(postData));
-    */
+    // get required parameters
+    const secret = req.query.bitcoinToGolightlyPlus;
+    const confirmations = req.query.confirmations;
+    const satoshiValue = req.query.value;
+    const receivingAddress = req.query.input_address;
+    const paymentType = req.query.paymentType;
 
-    request(blockchainAPIURL, function (error, response, body) {
-        if (!error && response.statusCode == 200) {
-            var blockchainData = JSON.parse(body);
-            console.log("Body from Blockchain.info: " + body);
-            res.json(blockchainData);
-            if(blockchainData.balance) {
-                emailAdmin('Balance successfully retrieved',
-                           '<h2>Hi! Here is your Blockchain.info</h2><p>Your balance is <strong>' +
-                           (blockchainData.balance / 100000000) + ' BTC</strong></p>');
-            }
+    // check parameters exist
+    if(!confirmations || !satoshiValue || !receivingAddress || !paymentType) {
+        res.send("Malformed request: expected parameters missing.");
+        console.log('Malformed request: ' + req.query);
+        return;
+    }
+
+    // Security check: check for value of secret and for valid incoming IP address
+    if(secret !== 'true') {// || req.ip !== validIncomingIpAddress) {
+        res.send("Security check failed.");
+        console.log('FYI: the incoming IP address was ' + req.ip);
+        return;
+    }
+
+    // check for min confirmations and alert the admin that a payment was received anyway
+    if(confirmations < minReqConfirmations) {
+        res.send("Not enough confirmations to process.");
+        emailAdmin("Payment received for " + paymentType, "<p>Payment received of <strong>" + (satoshiValue/100000000) + 
+                   " BTC</strong> from " + receivingAddress + "</p><p>There are currently only " + confirmations +
+                   " confirmations. So waiting for " + minReqConfirmations + " before processing.</p>");
+    }    
+    else {
+
+        emailAdmin('Confirmation of received payment for ' + paymentType + '!', "<p>The payment of <strong>" + (satoshiValue/100000000) + 
+                   " BTC</strong> received from " + receivingAddress + " is now confirmed.</p><p>There are currently " + confirmations +
+                   " confirmations for this transaction.</p>");
+
+        // switch on payment type
+        switch(paymentType) {
+            case 'savings':
+                // -- if savings, send 10% to registered savings account        
+                processSavings(satoshiValue, receivingAddress);
+                break;
+            case 'DAC':
+                // -- if DAC, split up payment received to registered members in decided upon proportions
+                console.log("Processing DAC payment...");
+                break;
+            default:
+                console.log("Payment type of '" + paymentType + "' not recognised. Ignoring.");
+                break;
         }
-    });
+
+        res.send('*ok*');
+    }
+});
+
+// process the callback from blockchain.info
+bitcoinApp.get('/get_balance', function(req, res) {
+
+    getBalance(res);
 
 });
 
@@ -49,6 +83,73 @@ bitcoinApp.get('*', function(req, res) {
 });
 
 // end of api ---------------------------------------------------------------------
+
+function processSavings(satoshiValue, receivingAddress) {
+
+    if(receivingAddress === process.env.BC_WALLET_REGISTERED_ADDRESS) {
+
+        console.log("Moving 10% of " + satoshiValue + " from " + receivingAddress + " to the registered savings account.");
+
+        var postData = {
+            to: process.env.BC_WALLET_SAVINGS_ADDRESS,
+            amount: Math.round(satoshiValue * 0.1),
+            password: process.env.BC_WALLET_PASSWORD,
+            second_password: process.env.BC_WALLET_SECOND_PASSWORD
+        };
+
+        //   console.log("Let's pretend it worked fine..");
+
+        callBlockchainWalletAPI('payment', qs.stringify(postData), function(blockchainResponse) {
+
+            console.log(blockchainResponse);
+
+            emailAdmin("Transfer to savings completed!", "<p>A payment of <strong>" + (Math.round(satoshiValue * 0.1)/100000000) +
+                       " BTC</strong> was successfully sent to " + process.env.BC_WALLET_SAVINGS_ADDRESS + "</p>");
+        });
+
+    }
+    else {
+        console.log(receivingAddress + ' is not registered for the automated savings tool. No transaction performed.');
+    }
+}
+
+function getBalance(res) {
+
+    var postData = {
+        password: process.env.BC_WALLET_PASSWORD
+    };
+
+    callBlockchainWalletAPI('balance', qs.stringify(postData), function(blockchainResponse) {
+
+        res.json(blockchainResponse);
+
+        /*
+        if(blockchainResponse.balance) {
+            emailAdmin('Your Blockchain.info wallet balance',
+                       '<p>Your wallet balance at Blockchain.info is <strong>' +
+                       (blockchainResponse.balance / 100000000) + ' BTC</strong></p>');
+        }
+        */
+    });
+}
+
+function callBlockchainWalletAPI(bcMethod, params, callback) {
+
+    var blockchainAPIURL = 'https://blockchain.info/merchant/' + process.env.BC_WALLET_IDENTIFIER + '/' +
+        bcMethod + '?' + params;
+
+    console.log("Calling Blockchain API with " + blockchainAPIURL);
+
+    request(blockchainAPIURL, function (error, response, body) {
+
+        if (!error && response.statusCode == 200) {
+            callback(JSON.parse(body));
+        }
+        else {
+            callback("Error: " + error + " / Response: " + response + " / Body: " + body);
+        }
+    });
+}
 
 function emailAdmin(emailSubject, emailMessage) {
 
@@ -83,5 +184,5 @@ function emailAdmin(emailSubject, emailMessage) {
 var ipaddress = process.env.OPENSHIFT_NODEJS_IP || "127.0.0.1";
 var port = process.env.OPENSHIFT_NODEJS_PORT || 8080;
 bitcoinApp.listen( port, ipaddress, function() {
-    console.log((new Date()) + ' Server is listening on port 8080');
+    console.log('Server started listening on port 8080 on ' + (new Date()));
 });
