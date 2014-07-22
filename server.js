@@ -9,9 +9,11 @@ var nodemailer = require('nodemailer');
 var bitcoinApp = express();
 //var myRootRef = new firebase('https://luminous-fire-4988.firebaseio.com/');
 var btcExchanges = [];
+var latestGlobalAvg = 0;
 
 // initialise the server
 fetchExchangeData();
+setInterval(fetchExchangeData, 60000);
 /*
 myRootRef.on('value', function(data) {
 
@@ -24,9 +26,9 @@ bitcoinApp.use(express.static(__dirname + '/public'));
 
 function fetchExchangeData() {
 
-    console.log("Fetching exchanges information..");
-
-    //add exchanges from bitcoin average
+    btcExchanges = [];
+    
+    // add exchanges from bitcoin average
     request('https://api.bitcoinaverage.com/exchanges/USD', function (error, response, body) {
 
         if (!error && response.statusCode == 200) {
@@ -47,6 +49,7 @@ function fetchExchangeData() {
         }
     });
 
+    // get exchange data from Coinbase
     request('https://coinbase.com/api/v1/prices/sell', function(error, response, data) {
 
         if (!error && response.statusCode == 200) {
@@ -58,12 +61,33 @@ function fetchExchangeData() {
             console.error("Error with coinbase: " + error + " / Response: " + response + " / Body: " + data);
         }
     });
+    
+    // get latest global average from Bitcoin Average
+    request('https://api.bitcoinaverage.com/ticker/global/USD/', function(error, response, data) {
+
+        if (!error && response.statusCode == 200) {
+
+            var tickerData = JSON.parse(data);
+            latestGlobalAvg = tickerData.last;
+        }
+        else {
+            console.error("Error with bitcoin average ticker: " + error + " / Response: " + response + " / Body: " + data);
+        }
+    });
+    
 }
 
 // api start ---------------------------------------------------------------------
 
 // Callback from blockchain.info
-bitcoinApp.get('/get_exchanges', function(req, res) {
+bitcoinApp.get('/latest_global_average', function(req, res) {
+
+    res.json(latestGlobalAvg);
+
+});
+
+// Callback from blockchain.info
+bitcoinApp.get('/exchanges', function(req, res) {
 
     res.json(btcExchanges);
 
