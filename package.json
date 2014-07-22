@@ -1,27 +1,27 @@
 {
-    "name": "Bitcoin-tools",
-    "version": "0.1.1",
-    "description": "Various bitcoin tools",
-    "keywords": [
-        "bitcoin",
-        "Node.js"
-    ],
-    "author": {
-        "name": "Golightly+",
-        "email": "support@golightlyplus.com",
-        "url": "http://www.golightlyplus.com/"
-    },
-    "homepage": "http://www.golightlyplus.com/",
-    "engines": {
-        "node": ">= 0.6.0",
-        "npm": ">= 1.0.0"
-    },
-
-    "dependencies": {
-        "express": "^3.12.1",
-        "nodemailer": "^0.7.0",
-        "request": "^2.36.0"
-    },
-    "private": true,
-    "main": "server.js"
+  "name": "Bitcoin-tools",
+  "version": "0.1.1",
+  "description": "Various bitcoin tools",
+  "keywords": [
+    "bitcoin",
+    "Node.js"
+  ],
+  "author": {
+    "name": "Golightly+",
+    "email": "support@golightlyplus.com",
+    "url": "http://www.golightlyplus.com/"
+  },
+  "homepage": "http://www.golightlyplus.com/",
+  "engines": {
+    "node": ">= 0.6.0",
+    "npm": ">= 1.0.0"
+  },
+  "dependencies": {
+    "express": "^3.12.1",
+    "nodemailer": "^0.7.0",
+    "request": "^2.36.0",
+    "firebase": "^1.0.17"
+  },
+  "private": true,
+  "main": "server.js"
 }

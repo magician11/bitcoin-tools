@@ -1,14 +1,73 @@
+// modules to include
 var express = require('express');
 var request = require('request');
 var qs = require('querystring');
 var nodemailer = require('nodemailer');
+//var firebase = require('firebase');
 
+//gloval variables for the server
 var bitcoinApp = express();
+//var myRootRef = new firebase('https://luminous-fire-4988.firebaseio.com/');
+var btcExchanges = [];
+
+// initialise the server
+fetchExchangeData();
+/*
+myRootRef.on('value', function(data) {
+
+    console.log(data.val().users);
+});
+*/
 
 // set root of frontend app
 bitcoinApp.use(express.static(__dirname + '/public'));
 
+function fetchExchangeData() {
+
+    console.log("Fetching exchanges information..");
+
+    //add exchanges from bitcoin average
+    request('https://api.bitcoinaverage.com/exchanges/USD', function (error, response, body) {
+
+        if (!error && response.statusCode == 200) {
+
+            var exchangeData = JSON.parse(body);
+           // console.log(exchangeData);
+
+            for(var exchange in exchangeData) {
+              //  console.log(exchange);
+                if(exchange == 'timestamp')
+                    break;
+
+                btcExchanges.push({name:exchangeData[exchange].display_name, ask: exchangeData[exchange].rates.ask, url:exchangeData[exchange].display_URL});
+            }
+        }
+        else {
+            console.error("Error with bitcoin average: " + error + " / Response: " + response + " / Body: " + body);
+        }
+    });
+
+    request('https://coinbase.com/api/v1/prices/sell', function(error, response, data) {
+
+        if (!error && response.statusCode == 200) {
+
+            var cbData = JSON.parse(data);
+            btcExchanges.push({name: 'Coinbase', ask: cbData.amount, url: 'https://coinbase.com/'});
+        }
+        else {
+            console.error("Error with coinbase: " + error + " / Response: " + response + " / Body: " + data);
+        }
+    });
+}
+
 // api start ---------------------------------------------------------------------
+
+// Callback from blockchain.info
+bitcoinApp.get('/get_exchanges', function(req, res) {
+
+    res.json(btcExchanges);
+
+});
 
 // Callback from blockchain.info
 bitcoinApp.get('/process_payment', function(req, res) {
