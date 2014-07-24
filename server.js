@@ -27,17 +27,15 @@ bitcoinApp.use(express.static(__dirname + '/public'));
 function fetchExchangeData() {
 
     btcExchanges = [];
-    
+
     // add exchanges from bitcoin average
     request('https://api.bitcoinaverage.com/exchanges/USD', function (error, response, body) {
 
         if (!error && response.statusCode == 200) {
 
             var exchangeData = JSON.parse(body);
-           // console.log(exchangeData);
 
             for(var exchange in exchangeData) {
-              //  console.log(exchange);
                 if(exchange == 'timestamp')
                     break;
 
@@ -55,13 +53,13 @@ function fetchExchangeData() {
         if (!error && response.statusCode == 200) {
 
             var cbData = JSON.parse(data);
-            btcExchanges.push({name: 'Coinbase', ask: cbData.amount, url: 'https://coinbase.com/'});
+            btcExchanges.push({name: 'Coinbase', ask: parseFloat(cbData.amount), url: 'https://coinbase.com/'});
         }
         else {
             console.error("Error with coinbase: " + error + " / Response: " + response + " / Body: " + data);
         }
     });
-    
+
     // get latest global average from Bitcoin Average
     request('https://api.bitcoinaverage.com/ticker/global/USD/', function(error, response, data) {
 
@@ -74,10 +72,17 @@ function fetchExchangeData() {
             console.error("Error with bitcoin average ticker: " + error + " / Response: " + response + " / Body: " + data);
         }
     });
-    
+
 }
 
 // api start ---------------------------------------------------------------------
+
+// allow this API of mine to be called from any external apps
+bitcoinApp.all('*', function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "X-Requested-With");
+    next();
+});
 
 // Callback from blockchain.info
 bitcoinApp.get('/latest_global_average', function(req, res) {
