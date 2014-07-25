@@ -10,6 +10,7 @@ var bitcoinApp = express();
 //var myRootRef = new firebase('https://luminous-fire-4988.firebaseio.com/');
 var btcExchanges = [];
 var latestGlobalAvg = 0;
+var bcIdSells = [];
 
 // initialise the server
 fetchExchangeData();
@@ -72,7 +73,19 @@ function fetchExchangeData() {
             console.error("Error with bitcoin average ticker: " + error + " / Response: " + response + " / Body: " + data);
         }
     });
+    
+    // get latest global average from Bitcoin Average
+    request('https://vip.bitcoin.co.id/api/btc_idr/depth', function(error, response, data) {
 
+        if (!error && response.statusCode == 200) {
+
+            var bcIdData = JSON.parse(data);
+            bcIdSells = bcIdData.sell;
+        }
+        else {
+            console.error("Error with bitcoin.co.id: " + error + " / Response: " + response + " / Body: " + data);
+        }
+    });
 }
 
 // api start ---------------------------------------------------------------------
@@ -84,14 +97,21 @@ bitcoinApp.all('*', function(req, res, next) {
     next();
 });
 
-// Callback from blockchain.info
+// expose the latest sells from bitcoin.co.id
+bitcoinApp.get('/latest_sells_bcid', function(req, res) {
+
+    res.json(bcIdSells);
+
+});
+
+// expose the latest global average
 bitcoinApp.get('/latest_global_average', function(req, res) {
 
     res.json(latestGlobalAvg);
 
 });
 
-// Callback from blockchain.info
+// expose a list of exchanges
 bitcoinApp.get('/exchanges', function(req, res) {
 
     res.json(btcExchanges);
