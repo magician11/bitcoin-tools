@@ -181,6 +181,26 @@ module.exports = function(bitcoinApp) {
                 console.error("Error with bitcoin.co.id: " + error + " / Response: " + response + " / Body: " + data);
             }
         });
+
+        // get latest buy price from Cryptsy
+        request('http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid=2', function(error, response, data) {
+
+            if (!error && response.statusCode == 200) {
+
+                var cryptsyData = JSON.parse(data);
+                var recentTrades = cryptsyData.return.markets.BTC.recenttrades;
+
+                for(var trade = 0, totTrades = recentTrades.length; trade < totTrades; trade++) {
+                    if(recentTrades[trade].type == 'Buy') {
+                        btcExchanges.push({name: 'Cryptsy', ask: parseFloat(parseFloat(recentTrades[trade].price).toFixed(2)), url: 'https://www.cryptsy.com/'});
+                        break;
+                    }
+                }
+            }
+            else {
+                console.error("Error with cryptsy.com: " + error + " / Response: " + response + " / Body: " + data);
+            }
+        });
     }
 
 
