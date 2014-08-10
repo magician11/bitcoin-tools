@@ -5,7 +5,7 @@ module.exports = function(bitcoinApp) {
 
     //global variables for this app
     var btcExchanges = [];
-    var latestGlobalAvg = 0;
+    var bitcoinAvgPrice = {};
     var bcIdSells = [];
 
     // initialise the the data.. and then update it every minute
@@ -30,10 +30,10 @@ module.exports = function(bitcoinApp) {
 
     });
 
-    // expose the latest global average
-    bitcoinApp.get('/latest_global_average', function(req, res) {
+    // expose the value of BTC in a range of currencies
+    bitcoinApp.get('/bitcoin_average_prices', function(req, res) {
 
-        res.json(latestGlobalAvg);
+        res.json(bitcoinAvgPrice);
 
     });
 
@@ -156,20 +156,11 @@ module.exports = function(bitcoinApp) {
             }
         });
 
-        // get latest global average from Bitcoin Average
-        request('https://api.bitcoinaverage.com/ticker/global/USD/', function(error, response, data) {
-
-            if (!error && response.statusCode == 200) {
-
-                var tickerData = JSON.parse(data);
-                latestGlobalAvg = tickerData.last;
-            }
-            else {
-                console.error("Error with bitcoin average ticker: " + error + " / Response: " + response + " / Body: " + data);
-            }
+        ['USD', 'IDR', 'AUD', 'NZD'].forEach(function(currency) {
+            getBTCcurrencyValue(currency);
         });
 
-        // get latest global average from Bitcoin Average
+        // get latest sell prices from bitcoin.co.id
         request('https://vip.bitcoin.co.id/api/btc_idr/depth', function(error, response, data) {
 
             if (!error && response.statusCode == 200) {
@@ -203,6 +194,23 @@ module.exports = function(bitcoinApp) {
         });
     }
 
+    function getBTCcurrencyValue(currency) {
+
+        // get latest global average from Bitcoin Average in currency
+        request('https://api.bitcoinaverage.com/ticker/global/' + currency, function(error, response, data) {
+
+            if (!error && response.statusCode == 200) {
+
+                var tickerData = JSON.parse(data);
+                bitcoinAvgPrice[currency] = tickerData.last;
+            }
+            else {
+                console.error("Error with bitcoin average (" +
+                              currency + ") ticker: " + error + 
+                              " / Response: " + response + " / Body: " + data);
+            }
+        });
+    }
 
     function processSavings(satoshiValue, receivingAddress) {
 
