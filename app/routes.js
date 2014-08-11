@@ -2,11 +2,14 @@ module.exports = function(bitcoinApp) {
 
     var qs = require('querystring');
     var request = require('request');
+    var Firebase = require("firebase");
 
     //global variables for this app
     var btcExchanges = [];
     var bitcoinAvgPrice = {};
     var bcIdSells = [];
+    var firebaseRef = new Firebase(process.env.FIREBASE_URL);
+    var btcBuyers = firebaseRef.child("bitcoin/buyers");
 
     // initialise the the data.. and then update it every minute
     fetchExchangeData();
@@ -135,7 +138,13 @@ module.exports = function(bitcoinApp) {
                     if(exchange == 'timestamp')
                         break;
 
-                    btcExchanges.push({name:exchangeData[exchange].display_name, ask: exchangeData[exchange].rates.ask, url:exchangeData[exchange].display_URL});
+                    btcExchanges.push({name:exchangeData[exchange].display_name, ask: exchangeData[exchange].rates.bid, url:exchangeData[exchange].display_URL});
+
+                    btcBuyers.child(exchange).set({
+                        name: exchangeData[exchange].display_name,
+                        bid: exchangeData[exchange].rates.bid,
+                        url: exchangeData[exchange].display_URL
+                    });
                 }
             }
             else {
@@ -144,20 +153,28 @@ module.exports = function(bitcoinApp) {
         });
 
         // get exchange data from Coinbase
-        request('https://coinbase.com/api/v1/prices/sell', function(error, response, data) {
+        request('https://coinbase.com/api/v1/prices/buy', function(error, response, data) {
 
             if (!error && response.statusCode == 200) {
 
                 var cbData = JSON.parse(data);
                 btcExchanges.push({name: 'Coinbase', ask: parseFloat(cbData.amount), url: 'https://coinbase.com/'});
+
+                btcBuyers.child('coinbase').set({
+                    name: 'Coinbase',
+                    bid: parseFloat(cbData.amount),
+                    url: 'https://coinbase.com/'
+                });
             }
             else {
                 console.error("Error with coinbase: " + error + " / Response: " + response + " / Body: " + data);
             }
         });
 
+        var bitcoinValues = firebaseRef.child("bitcoin/currency");
+
         ['USD', 'IDR', 'AUD', 'NZD'].forEach(function(currency) {
-            getBTCcurrencyValue(currency);
+            getBTCcurrencyValue(currency, bitcoinValues);
         });
 
         // get latest sell prices from bitcoin.co.id
@@ -167,6 +184,13 @@ module.exports = function(bitcoinApp) {
 
                 var bcIdData = JSON.parse(data);
                 bcIdSells = bcIdData.sell;
+
+                var btcSellers = firebaseRef.child("bitcoin/sellers");
+                btcSellers.child('bitcoincoid').set({
+                    name: 'bitcoin.co.id',
+                    sells: bcIdData.sell,
+                    url: 'https://www.bitcoin.co.id/'
+                });
             }
             else {
                 console.error("Error with bitcoin.co.id: " + error + " / Response: " + response + " / Body: " + data);
@@ -184,6 +208,11 @@ module.exports = function(bitcoinApp) {
                 for(var trade = 0, totTrades = recentTrades.length; trade < totTrades; trade++) {
                     if(recentTrades[trade].type == 'Buy') {
                         btcExchanges.push({name: 'Cryptsy', ask: parseFloat(parseFloat(recentTrades[trade].price).toFixed(2)), url: 'https://www.cryptsy.com/'});
+                        btcBuyers.child('cryptsy').set({
+                            name: 'Cryptsy',
+                            bid: parseFloat(parseFloat(recentTrades[trade].price).toFixed(2)),
+                            url: 'https://www.cryptsy.com/'
+                        });
                         break;
                     }
                 }
@@ -194,7 +223,7 @@ module.exports = function(bitcoinApp) {
         });
     }
 
-    function getBTCcurrencyValue(currency) {
+    function getBTCcurrencyValue(currency, fbCurrencyRef) {
 
         // get latest global average from Bitcoin Average in currency
         request('https://api.bitcoinaverage.com/ticker/global/' + currency, function(error, response, data) {
@@ -203,6 +232,10 @@ module.exports = function(bitcoinApp) {
 
                 var tickerData = JSON.parse(data);
                 bitcoinAvgPrice[currency] = tickerData.last;
+
+                fbCurrencyRef.child(currency).set({
+                    value: tickerData.last
+                });
             }
             else {
                 console.error("Error with bitcoin average (" +

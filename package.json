@@ -20,7 +20,7 @@
     "express": "^3.12.1",
     "nodemailer": "^0.7.0",
     "request": "^2.36.0",
-    "firebase": "^1.0.17"
+    "firebase": "^1.0.19"
   },
   "private": true,
   "main": "server.js"
